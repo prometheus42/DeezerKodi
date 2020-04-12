@@ -2,5 +2,6 @@
     <category label="User credentials">
         <setting id="username" type="text" label="1000" default=""/>
         <setting id="password" type="text" option="hidden" label="1001" default=""/>
+        <setting id="profile_id" type="text" label="1002" default=""/>
     </category>
 </settings>

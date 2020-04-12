@@ -1,6 +1,7 @@
 from .View import View
 
 import xbmcgui
+import xbmc
 import xbmcplugin
 
 
@@ -47,6 +48,7 @@ class AlbumsView(View):
                 list_items.append((self.get_url("/%d" % track.id), list_item, False))
             except:
                 pass
+#        xbmc.log(str(list_items),level=xbmc.LOGNOTICE)
         return list_items
 
     def show(self):

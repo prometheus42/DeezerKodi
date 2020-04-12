@@ -1,7 +1,7 @@
 import requests
 import hashlib
 import json
-import logging
+import xbmc
 
 
 def _object_from_type(type, connection, content):
@@ -25,20 +25,26 @@ def _object_from_type(type, connection, content):
 
 class Connection(object):
     """Connection class holds user login and password. It is responsible for obtaining access_token automatically when a request is made"""
-    _API_BASE_URL = "http://api.deezer.com/2.0/{service}/{id}/{method}"
-    _API_BASE_STREAMING_URL = "http://tv.deezer.com/smarttv/streaming.php"
-    _API_AUTH_URL = "http://tv.deezer.com/smarttv/authentication.php"
+    _API_BASE_URL = "https://api.deezer.com/2.0/{service}/{id}/{method}"
+    _API_BASE_STREAMING_URL = "https://tv.deezer.com/smarttv/streaming.php"
+    _API_AUTH_URL = "https://tv.deezer.com/smarttv/authentication.php"
 
-    def __init__(self, username=None, password=None):
+    def __init__(self, username=None, password=None, profile_id=''):
         self._username = self._password = self._access_token = None
         self.set_username(username)
         self.set_password(password)
+        self.set_profile_id(profile_id)
         self._obtain_access_token()
 
     """save username"""
 
     def set_username(self, username):
         self._username = username
+
+    """save profile_id"""
+
+    def set_profile_id(self, profile_id):
+        self._profile_id = profile_id
 
     """save md5 of user password"""
 
@@ -87,10 +93,11 @@ class Connection(object):
 
     def make_request(self, service, id='', method='', parameters={}):
         base_url = self._API_BASE_URL.format(service=service, id=id, method=method)
-        logging.debug("make_request: %s | %s", base_url, parameters)
+#        xbmc.log("API - make_request: " + base_url + " | " + str(parameters),level=xbmc.LOGNOTICE)
         r = requests.get(base_url, params=self._merge_two_dicts(
             {'output': 'json', 'access_token': self._access_token}, parameters
         ))
+#        xbmc.log("API - make_request: " + r.text.encode('ascii','ignore').replace('\x00', '??'),level=xbmc.LOGNOTICE)
         return json.loads(r.text, object_hook=self._object_decoder)
 
     def make_request_url(self, url):
@@ -103,6 +110,7 @@ class Connection(object):
             ("%s_id" % type): id,
             'device': 'panasonic'
         })
+ #       xbmc.log("API - make_request_streaming_custom: " + r.text.encode('ascii','ignore').replace('\x00', '??'),level=xbmc.LOGNOTICE)
         if type.startswith('radio') or type.startswith('artist'):
             return json.loads(r.text, object_hook=self._object_decoder)
         return r.text
@@ -339,19 +347,19 @@ class Chart(object):
         self.connection = connection
 
     def get_tracks(self):
-        self.tracks = self.connection.make_request('chart', 0, 'tracks')
+        self.tracks = self.connection.make_request('chart', 0, 'tracks',parameters={'limit': 100})
         return self.tracks
 
     def get_albums(self):
-        self.albums = self.connection.make_request('chart', 0, 'albums')
+        self.albums = self.connection.make_request('chart', 0, 'albums',parameters={'limit': 100})
         return self.albums
 
     def get_artists(self):
-        self.artists = self.connection.make_request('chart', 0, 'artists')
+        self.artists = self.connection.make_request('chart', 0, 'artists',parameters={'limit': 100})
         return self.artists
 
     def get_playlists(self):
-        self.playlists = self.connection.make_request('chart', 0, 'playlists')
+        self.playlists = self.connection.make_request('chart', 0, 'playlists',parameters={'limit': 100})
         return self.playlists
 
     def __repr__(self):
@@ -424,7 +432,7 @@ class Radio(object):
     def get_tracks(self):
         if hasattr(self, 'tracks') and isinstance(self.tracks, IterableCollection):
             return self.tracks
-        self.tracks = self.connection.make_request('radio', self.id, 'tracks')
+        self.tracks = self.connection.make_request('radio', self.id, 'tracks',parameters={'limit': 200})
         return self.tracks
 
     def get_track(self):
@@ -460,6 +468,10 @@ class User(object):
         self.connection = connection
         self.__dict__.update(user)
 
+        if(self.connection._profile_id != ''):
+            self.id = self.connection._profile_id
+
+
     def get_albums(self):
         if hasattr(self, 'albums') and isinstance(self.albums, IterableCollection):
             return self.albums
@@ -479,16 +491,17 @@ class User(object):
         return self.charts
 
     def get_flow(self):
-        if hasattr(self, 'flow') and isinstance(self.flow, IterableCollection):
-            return self.flow
-        self.flow = self.connection.make_request('user', self.id, 'flow')
-        return self.flow
+#        No caching for flow as we whant to have a new selection with every call
+        flow = self.connection.make_request('user', self.id, 'flow',parameters={'limit': 40})
+        flow._append_data(self.connection.make_request('user', self.id, 'flow',parameters={'limit': 40}))
+        flow._append_data(self.connection.make_request('user', self.id, 'flow',parameters={'limit': 40}))
+        flow._append_data(self.connection.make_request('user', self.id, 'flow',parameters={'limit': 40}))
+        flow._append_data(self.connection.make_request('user', self.id, 'flow',parameters={'limit': 40}))
+        return flow
 
     def get_history(self):
-        if hasattr(self, 'history') and isinstance(self.history, IterableCollection):
-            return self.history
-        self.history = self.connection.make_request('user', self.id, 'history')
-        return self.history
+#        No caching for history as we whant to have the lastest list
+        return self.connection.make_request('user', self.id, 'history')
 
     def get_playlists(self):
         if hasattr(self, 'playlists') and isinstance(self.playlists, IterableCollection):
@@ -529,31 +542,34 @@ class Recommendations(object):
     def get_albums(self):
         if hasattr(self, 'albums') and isinstance(self.albums, IterableCollection):
             return self.albums
-        self.albums = self.connection.make_request('user', self.user.id, 'recommendations/albums')
+        self.albums = self.connection.make_request('user', self.user.id, 'recommendations/albums',parameters={'limit': 100})
         return self.albums
 
     def get_artists(self):
         if hasattr(self, 'artists') and isinstance(self.artists, IterableCollection):
             return self.artists
-        self.artists = self.connection.make_request('user', self.user.id, 'recommendations/artists')
+        self.artists = self.connection.make_request('user', self.user.id, 'recommendations/artists',parameters={'limit': 100})
         return self.artists
 
     def get_tracks(self):
-        if hasattr(self, 'tracks') and isinstance(self.tracks, IterableCollection):
-            return self.tracks
-        self.tracks = self.connection.make_request('user', self.user.id, 'recommendations/tracks')
-        return self.tracks
+#        No caching for flow as we whant to have a new selection with every call
+        tracks = self.connection.make_request('user', self.user.id, 'recommendations/tracks',parameters={'limit': 40})
+        tracks._append_data(self.connection.make_request('user', self.user.id, 'recommendations/tracks',parameters={'limit': 40}))
+        tracks._append_data(self.connection.make_request('user', self.user.id, 'recommendations/tracks',parameters={'limit': 40}))
+        tracks._append_data(self.connection.make_request('user', self.user.id, 'recommendations/tracks',parameters={'limit': 40}))
+        tracks._append_data(self.connection.make_request('user', self.user.id, 'recommendations/tracks',parameters={'limit': 40}))
+        return tracks
 
     def get_playlists(self):
         if hasattr(self, 'playlists') and isinstance(self.playlists, IterableCollection):
             return self.playlists
-        self.playlists = self.connection.make_request('user', self.user.id, 'recommendations/playlists')
+        self.playlists = self.connection.make_request('user', self.user.id, 'recommendations/playlists',parameters={'limit': 100})
         return self.playlists
 
     def get_radios(self):
         if hasattr(self, 'radios') and isinstance(self.radios, IterableCollection):
             return self.radios
-        self.radios = self.connection.make_request('user', self.user.id, 'recommendations/radios')
+        self.radios = self.connection.make_request('user', self.user.id, 'recommendations/radios',parameters={'limit': 100})
         return self.radios
 
     def __repr__(self):

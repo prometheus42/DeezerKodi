@@ -43,6 +43,14 @@ class MainScene(Scene):
             2006: {
                 "image": xbmc.translatePath(os.path.join(self.scene_router.images_path, "recent-button.png")),
                 "url": "%s?scene=%s" % (self.scene_router.base_url, "recent")
+            },
+            2007: {
+                "image": xbmc.translatePath(os.path.join(self.scene_router.images_path, "flow-button.png")),
+                "url": "%s?scene=%s" % (self.scene_router.base_url, "flow")
+            },
+            2008: {
+                "image": xbmc.translatePath(os.path.join(self.scene_router.images_path, "recommendations-button.png")),
+                "url": "%s?scene=%s" % (self.scene_router.base_url, "recommendations")
             }
         }
 

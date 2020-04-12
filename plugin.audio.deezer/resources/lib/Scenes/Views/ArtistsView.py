@@ -79,7 +79,7 @@ class ArtistMenuView(View):
         items = {
             3000: {
                 "image": xbmc.translatePath(
-                    os.path.join(self.scene.scene_router.images_path, "genre-button.png")),
+                    os.path.join(self.scene.scene_router.images_path, "tracks-button.png")),
                 "url": self.get_url("/artisttop")
             },
             3001: {

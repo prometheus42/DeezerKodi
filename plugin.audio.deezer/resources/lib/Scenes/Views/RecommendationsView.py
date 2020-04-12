@@ -6,40 +6,40 @@ import xbmcgui
 import xbmcplugin
 
 
-class ChartView(View):
+class RecommendationsView(View):
     def __init__(self, scene, view_router, parent_view=None):
-        super(ChartView, self).__init__(scene, view_router, "chart", parent_view)
-        self.lazy_chart = None
+        super(RecommendationsView, self).__init__(scene, view_router, "recommendations", parent_view)
+        self.lazy_recommendations = None
 
-    def set_lazy_chart(self, lazy_chart):
-        self.lazy_chart = lazy_chart
+    def set_lazy_recommendations(self, lazy_recommendations):
+        self.lazy_recommendations = lazy_recommendations
 
-    def _get_lazy_chart(self):
-        # try to get lazy chart from the parent if none are set
-        if self.lazy_chart is None:
-            self.lazy_chart = self.parent_view.get_lazy_chart()
-        return self.lazy_chart
+    def _get_lazy_recommendations(self):
+        # try to get lazy recommendations from the parent if none are set
+        if self.lazy_recommendations is None:
+            self.lazy_recommendations = self.parent_view.get_lazy_recommendations()
+        return self.lazy_recommendations
 
     # to display the albums
     def get_lazy_albums(self):
-        chart = self._get_lazy_chart()()
-        return lambda: self.scene.cache.get('chart_albums', default_producer=chart.get_albums)
+        recommendations = self._get_lazy_recommendations()()
+        return lambda: self.scene.cache.get('recommendations_albums', default_producer=recommendations.get_albums)
 
     # to display the artists
     def get_lazy_artists(self):
-        chart = self._get_lazy_chart()()
-        return lambda: self.scene.cache.get('chart_artists', default_producer=chart.get_artists)
+        recommendations = self._get_lazy_recommendations()()
+        return lambda: self.scene.cache.get('recommendations_artists', default_producer=recommendations.get_artists)
 
     # to display the playlists
     def get_lazy_playlists(self):
-        chart = self._get_lazy_chart()()
-        return lambda: self.scene.cache.get('chart_playlists', default_producer=chart.get_playlists)
+        recommendations = self._get_lazy_recommendations()()
+        return lambda: self.scene.cache.get('recommendations_playlists', default_producer=recommendations.get_playlists)
 
     # to display the tracks
     def get_list_items(self):
-        chart = self._get_lazy_chart()()
+        recommendations = self._get_lazy_recommendations()()
         list_items = []
-        for track in self.scene.cache.get('chart_tracks', default_producer=chart.get_tracks):
+        for track in self.scene.cache.get('recommendations_tracks', default_producer=recommendations.get_tracks):
             try:
                 list_item = xbmcgui.ListItem("%s - %s" % (track.artist.name, track.title),
                                              thumbnailImage=track.album.cover_big)
@@ -52,7 +52,7 @@ class ChartView(View):
         return list_items
 
     # to diplay first menu
-    def _show_chart_menu(self):
+    def _show_recommendations_menu(self):
         items = {
             3005: {
                 "image": xbmc.translatePath(
@@ -83,4 +83,4 @@ class ChartView(View):
         xbmcplugin.addDirectoryItems(self.scene.scene_router.addon_handle, list_items)
 
     def show(self):
-        self._show_chart_menu()
+        self._show_recommendations_menu()

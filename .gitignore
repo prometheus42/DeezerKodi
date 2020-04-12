@@ -1,3 +1,5 @@
 .idea
 *.pyo
 *.pyc
+plugin.audio.deezer/plugin.audio.deezer-0.0.5.zip
+.gitignore

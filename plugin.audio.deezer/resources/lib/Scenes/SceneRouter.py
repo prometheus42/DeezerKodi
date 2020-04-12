@@ -13,6 +13,8 @@ from .MyArtistsScene import MyArtistsScene
 from .SearchScene import SearchScene
 from .ChartScene import ChartScene
 from .RecentScene import RecentScene
+from .FlowScene import FlowScene
+from .RecommendationsScene import RecommendationsScene
 
 from ..DeezerApi import Connection, Api
 from ..cache import Cache
@@ -36,7 +38,9 @@ class SceneRouter(object):
             "albums": lambda: MyAlbumsScene(self),
             "artists": lambda: MyArtistsScene(self),
             "search": lambda: SearchScene(self),
-            "recent": lambda: RecentScene(self)
+            "recent": lambda: RecentScene(self),
+            "flow": lambda: FlowScene(self),
+            "recommendations":  lambda: RecommendationsScene(self)
         }
 
     # url consists of the path and query parts
@@ -84,6 +88,7 @@ class SceneRouter(object):
     def _has_credentials(self):
         self._username = self.addon.getSetting('username')
         self._password = self.addon.getSetting('password')
+        self._profile_id = self.addon.getSetting('profile_id')
         if self._username != "" and self._password != "":
             return self.connect()
         else:
@@ -112,7 +117,7 @@ class SceneRouter(object):
     def connect(self):
         try:
             self.connection = self.cache.get('connection',
-                                             default_producer=lambda: Connection(self._username, self._password))
+                                             default_producer=lambda: Connection(self._username, self._password, self._profile_id))
         except Exception as e:
             self.notification("Could not sign in", e)
             return False

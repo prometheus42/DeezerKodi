@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="ISO-8859-1" standalone="yes"?>
 <strings>
     <!-- Settings -->
-    <string id="1000">Username</string>
-    <string id="1001">Password</string>
-    <string id="1002">Profile ID</string>
+    <string id="User credentials">User credentials</string>
+    <string id="Deezer Username">Username</string>
+    <string id="Deezer Password">Password</string>
+    <string id="Deezer ProfileID">Profile ID</string>
 
     <!-- Menu labels -->
     <string id="2000">Chart</string>

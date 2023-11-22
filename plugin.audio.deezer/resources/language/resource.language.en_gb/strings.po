@@ -1,0 +1,148 @@
+# Deezer Plugin language file
+msgid ""
+msgstr ""
+"Project-Id-Version: KODI Main\n"
+"Last-Translator: Christian Wichmann\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: en_GB\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#
+# Settings
+#
+msgctxt "#1000"
+msgid "Username"
+msgstr ""
+
+msgctxt "#1001"
+msgid "Password"
+msgstr ""
+
+msgctxt "#1002"
+msgid "Profile ID"
+msgstr ""
+
+msgctxt "#1003"
+msgid "User Credentials"
+msgstr ""
+
+#
+# Menu labels
+#
+msgctxt "#2000"
+msgid "Chart"
+msgstr ""
+
+msgctxt "#2001"
+msgid "Radio channels"
+msgstr ""
+
+msgctxt "#2002"
+msgid "My playlists"
+msgstr ""
+
+msgctxt "#2003"
+msgid "My albums"
+msgstr ""
+
+msgctxt "#2004"
+msgid "My artists"
+msgstr ""
+
+msgctxt "#2005"
+msgid "Search"
+msgstr ""
+
+msgctxt "#2006"
+msgid "Recently played"
+msgstr ""
+
+msgctxt "#2007"
+msgid "Flow"
+msgstr ""
+
+msgctxt "#2008"
+msgid "Recommendations"
+msgstr ""
+
+#
+# Dialogs
+#
+msgctxt "#2050"
+msgid "Sign in required"
+msgstr ""
+
+msgctxt "#2051"
+msgid "You need to sign in to use Deezer"
+msgstr ""
+
+msgctxt "#2052"
+msgid "Do you want to try again, or exit Deezer?"
+msgstr ""
+
+msgctxt "#2053"
+msgid "Try again"
+msgstr ""
+
+msgctxt "#2054"
+msgid "Exit"
+msgstr ""
+
+#
+# Artist View Menu
+#
+msgctxt "#3000"
+msgid "Top"
+msgstr ""
+
+msgctxt "#3001"
+msgid "Albums"
+msgstr ""
+
+msgctxt "#3002"
+msgid "Playlists"
+msgstr ""
+
+msgctxt "#3003"
+msgid "Radio"
+msgstr ""
+
+#
+# Chart View Menu
+#
+msgctxt "#3005"
+msgid "Tracks"
+msgstr ""
+
+msgctxt "#3006"
+msgid "Albums"
+msgstr ""
+
+msgctxt "#3007"
+msgid "Artists"
+msgstr ""
+
+msgctxt "#3008"
+msgid "Playlists"
+msgstr ""
+
+#
+# Search View Menu
+#
+msgctxt "#3010"
+msgid "Search all"
+msgstr ""
+
+msgctxt "#3011"
+msgid "Search artists"
+msgstr ""
+
+msgctxt "#3012"
+msgid "Search albums"
+msgstr ""
+
+msgctxt "#3013"
+msgid "Search tracks"
+msgstr ""

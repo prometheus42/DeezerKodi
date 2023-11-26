@@ -1,4 +1,6 @@
 from .View import View
+
+import xbmc
 import xbmcgui
 
 
@@ -19,15 +21,14 @@ class RecentView(View):
     def get_list_items(self):
         list_items = []
 
-        recentTracks = self._get_lazy_tracks()()
-        for track in recentTracks:
+        recent_tracks = self._get_lazy_tracks()()
+        for track in recent_tracks:
             try:
-                list_item = xbmcgui.ListItem("%s - %s" % (track.artist.name, track.title),
-                                             thumbnailImage=track.album.cover_big)
+                list_item = xbmcgui.ListItem(f"{track.artist.name} - {track.title}")
                 list_item.setProperty('IsPlayable', 'true')
-                list_item.setArt({'fanart': self.scene.scene_router.fanart_path})
+                list_item.setArt({'fanart': self.scene.scene_router.fanart_path, 'thumb': track.album.cover_big})
                 self.add_item_track_info(list_item, track)
-                list_items.append((self.get_url("/%d" % track.id), list_item, False))
-            except:
-                pass
+                list_items.append((self.get_url(f"/{track.id}"), list_item, False))
+            except Exception as e:
+                xbmc.log(str(e), xbmc.LOGERROR)
         return list_items

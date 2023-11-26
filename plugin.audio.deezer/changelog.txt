@@ -1,3 +1,7 @@
+28/11/2023: prometheus42
+- Cleaned up the project repo.
+- Updated deprecated or removed calls to KODI api.
+- Fixed some Python (2to3) issues.
 11/04/2019: hjochman
 - Fixed recent songs
 - Added flow
@@ -6,6 +10,9 @@
 - Changed API to use https
 29/12/2019: khisant
 - Added ability to change profile in family account
-26/06/2017: Fixed caching behaviour. Enabled cache for more items to make app a little more responsive, however reduced the cache to 10 minutes.
-5/06/2016: Updated Api and icons. Added access to recently played tracks.
-7/05/2016: Initial release.
+26/06/2017:
+- Fixed caching behaviour. Enabled cache for more items to make app a little more responsive, however reduced the cache to 10 minutes.
+5/06/2016:
+- Updated Api and icons. Added access to recently played tracks.
+7/05/2016:
+- Initial release.

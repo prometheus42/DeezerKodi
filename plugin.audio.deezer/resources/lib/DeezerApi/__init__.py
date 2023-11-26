@@ -1,33 +1,51 @@
-import requests
-import hashlib
+
 import json
+import hashlib
+import inspect
+
 import xbmc
+import requests
+
+from ..deezer import Deezer
 
 
-def _object_from_type(type, connection, content):
-    if type == "album":
+def _object_from_type(object_type, connection, content):
+    if object_type == "album":
         return Album(connection, content)
-    if type == "artist":
+    if object_type == "artist":
         return Artist(connection, content)
-    if type == "comment":
+    if object_type == "comment":
         return Comment(connection, content)
-    if type == "genre":
+    if object_type == "genre":
         return Genre(connection, content)
-    if type == "playlist":
+    if object_type == "playlist":
         return Playlist(connection, content)
-    if type == "radio":
+    if object_type == "radio":
         return Radio(connection, content)
-    if type == "track":
+    if object_type == "track":
         return Track(connection, content)
-    if type == "user":
+    if object_type == "user":
         return User(connection, content)
 
 
+class DeezerAuthError(Exception):
+    pass
+
+
+class DeezerConnectionError(Exception):
+    pass
+
+
+class DeezerParameterError(Exception):
+    pass
+
+
 class Connection(object):
-    """Connection class holds user login and password. It is responsible for obtaining access_token automatically when a request is made"""
+    """
+    Connection class holds user login and password. It is responsible for
+    obtaining access_token automatically when a request is made
+    """
     _API_BASE_URL = "https://api.deezer.com/2.0/{service}/{id}/{method}"
-    _API_BASE_STREAMING_URL = "https://tv.deezer.com/smarttv/streaming.php"
-    _API_AUTH_URL = "https://tv.deezer.com/smarttv/authentication.php"
 
     def __init__(self, username=None, password=None, profile_id=''):
         self._username = self._password = self._access_token = None
@@ -36,23 +54,20 @@ class Connection(object):
         self.set_profile_id(profile_id)
         self._obtain_access_token()
 
-    """save username"""
-
     def set_username(self, username):
+        """save username"""
         self._username = username
 
-    """save profile_id"""
-
     def set_profile_id(self, profile_id):
+        """save profile_id"""
         self._profile_id = profile_id
 
-    """save md5 of user password"""
-
     def set_password(self, password):
+        """save md5 of user password"""
         self._password = password
         if self._password is not None:
             md5 = hashlib.md5()
-            md5.update(self._password)
+            md5.update(self._password.encode('utf-8'))
             self._password = md5.hexdigest()
 
     def _object_decoder(self, dct):
@@ -62,58 +77,59 @@ class Connection(object):
             return IterableCollection(self, collection=dct)
         return dct
 
-    """obtain access token by pretending to be a smart tv"""
-
     def _obtain_access_token(self):
+        """obtain access token by pretending to be a smart tv"""
         if self._username is None or self._password is None:
-            raise Exception("Username and password is required!")
-        r = requests.get(self._API_AUTH_URL, params={
-            'login': self._username,
-            'password': self._password,
-            'device': 'panasonic'
-        })
-        response = r.json()
-        if 'access_token' in response:
-            self._access_token = response['access_token']
-        else:
-            if 'error' in response:
-                error = response['error']
-                raise Exception(error['message'])
-            else:
-                raise Exception("Could not obtain access token!")
-
-    """Given two dicts, merge them into a new dict as a shallow copy."""
+            raise DeezerAuthError("Username and password is required!")
+        arl = ''
+        self.deezer = Deezer()
+        self.deezer.login_via_arl(arl)
+        self._access_token = ''
+        self.deezer.api.access_token = self._access_token
+        # if 'error' in response:
+        #     error = response['error']
+        #     raise Exception(error['message'])
+        # else:
+        #     raise Exception("Could not obtain access token!")
 
     def _merge_two_dicts(self, x, y):
+        """Given two dicts, merge them into a new dict as a shallow copy."""
         z = x.copy()
         z.update(y)
         return z
 
-    """make request to the api and return response as a dict"""
-
-    def make_request(self, service, id='', method='', parameters={}):
-        base_url = self._API_BASE_URL.format(service=service, id=id, method=method)
-#        xbmc.log("API - make_request: " + base_url + " | " + str(parameters),level=xbmc.LOGNOTICE)
+    def make_request(self, service, requested_id='', method='', parameters=None):
+        """make request to the api and return response as a dict"""
+        if parameters is None:
+            parameters = {}
+        base_url = self._API_BASE_URL.format(
+            service=service, id=requested_id, method=method)
+        xbmc.log("API - make_request: " + base_url +
+                 " | " + str(parameters), level=xbmc.LOGINFO)
         r = requests.get(base_url, params=self._merge_two_dicts(
             {'output': 'json', 'access_token': self._access_token}, parameters
-        ))
-#        xbmc.log("API - make_request: " + r.text.encode('ascii','ignore').replace('\x00', '??'),level=xbmc.LOGNOTICE)
+        ), timeout=10)
+        # xbmc.log(r.text, xbmc.LOGINFO)
+        #xbmc.log("API - make_request: " + r.text, level=xbmc.LOGINFO)
         return json.loads(r.text, object_hook=self._object_decoder)
 
     def make_request_url(self, url):
-        r = requests.get(url)
+        """Make a request to given URL and return JSON data decoded as object."""
+        r = requests.get(url, timeout=10)
+        #xbmc.log(r.text, xbmc.LOGINFO)
         return json.loads(r.text, object_hook=self._object_decoder)
 
     def make_request_streaming_custom(self, id='', type=''):
-        r = requests.get(self._API_BASE_STREAMING_URL, params={
-            'access_token': self._access_token,
-            ("%s_id" % type): id,
-            'device': 'panasonic'
-        })
+        raise Exception('Can not stream just now!!!!')
+        # r = requests.get(self._API_BASE_STREAMING_URL, params={
+        #    'access_token': self._access_token,
+        #    ("%s_id" % type): id,
+        #    'device': 'panasonic'
+        # })
  #       xbmc.log("API - make_request_streaming_custom: " + r.text.encode('ascii','ignore').replace('\x00', '??'),level=xbmc.LOGNOTICE)
-        if type.startswith('radio') or type.startswith('artist'):
-            return json.loads(r.text, object_hook=self._object_decoder)
-        return r.text
+        # if type.startswith('radio') or type.startswith('artist'):
+        #    return json.loads(r.text, object_hook=self._object_decoder)
+        # return r.text
 
     def make_request_streaming(self, deezer_object):
         return self.make_request_streaming_custom(deezer_object.id, deezer_object.type)
@@ -122,70 +138,90 @@ class Connection(object):
 class Api(object):
     def __init__(self, connection):
         if connection is None:
-            raise Exception("Connection is required!")
+            raise DeezerConnectionError("Connection is required!")
         self.connection = connection
 
     def get_user(self, id='me'):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         return self.connection.make_request('user', id)
+        # x = self.connection.deezer.api.get_user(id)
+        # json_data = json.dumps(x)
+        # return json.loads(json_data, object_hook=self.connection._object_decoder)
 
     def get_track(self, id=None):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         if id is None:
-            raise Exception("Track id is required!")
+            raise DeezerParameterError("Track id is required!")
         return self.connection.make_request('track', id)
 
     def get_artist(self, id=None):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         if id is None:
-            raise Exception("Artist id is required!")
+            raise DeezerParameterError("Artist id is required!")
         return self.connection.make_request('artist', id)
 
     def get_album(self, id=None):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         if id is None:
-            raise Exception("Album id is required!")
+            raise DeezerParameterError("Album id is required!")
         return self.connection.make_request('album', id)
 
     def get_chart(self):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         return Chart(self.connection)
 
     def get_genre(self, id=None):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         if id is None:
-            raise Exception("Genre id is required!")
+            raise DeezerParameterError("Genre id is required!")
         return self.connection.make_request('genre', id)
 
     def get_genres(self):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         return self.connection.make_request('genre')
 
     def get_radios(self):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         return self.connection.make_request('radio')
 
     def get_playlist(self, id=None):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         if id is None:
-            raise Exception("Playlist id is required!")
+            raise DeezerParameterError("Playlist id is required!")
         return self.connection.make_request('playlist', id)
 
     def search(self, query=None, type=''):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         if query is None:
-            raise Exception("Query is required!")
-        return self.connection.make_request('search', id=type, parameters={'q': query})
+            raise DeezerParameterError("Query is required!")
+        return self.connection.make_request('search', requested_id=type, parameters={'q': query})
 
     def search_artist(self, query=None):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         return self.search(query, 'artist')
 
     def search_album(self, query=None):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         return self.search(query, 'album')
 
     def search_history(self, query=None):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         return self.search(query, 'history')
 
     def search_playlist(self, query=None):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         return self.search(query, 'playlist')
 
     def search_radio(self, query=None):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         return self.search(query, 'radio')
 
     def search_track(self, query=None):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         return self.search(query, 'track')
 
     def get_streaming_url(self, id=None, type='track'):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         return self.connection.make_request_streaming_custom(id, type)
 
 
@@ -206,12 +242,14 @@ class IterableCollection(object):
         self._next = _next
 
     def _load_collection(self, collection):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         if isinstance(collection, list):
             self._append_data(collection)
             self._update_info(total=self.data_length)
         elif isinstance(collection, IterableCollection):
             self._append_data(collection.data)
-            self._update_info(total=collection.total, _prev=collection._prev, _next=collection._next)
+            self._update_info(total=collection.total,
+                              _prev=collection._prev, _next=collection._next)
         else:
             if 'data' not in collection:
                 raise Exception("Collection is not iterable!")
@@ -220,6 +258,7 @@ class IterableCollection(object):
                               _next=collection.get('next', None))
 
     def _retrieve_item(self, index):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         # if we have the item with such index
         if index < self.data_length:
             return self.data[index]
@@ -241,7 +280,7 @@ class IterableCollection(object):
         self._iterable_index = 0
         return self
 
-    def next(self):
+    def __next__(self):
         item = self._retrieve_item(self._iterable_index)
         self._iterable_index += 1
         if item is None:
@@ -261,21 +300,25 @@ class Album(object):
         self.__dict__.update(album)
 
     def get_tracks(self):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         if hasattr(self, 'tracks') and isinstance(self.tracks, IterableCollection):
             return self.tracks
         self.tracks = self.connection.make_request('album', self.id, 'tracks')
         return self.tracks
 
     def get_fans(self):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         if hasattr(self, 'fans') and isinstance(self.fans, IterableCollection):
             return self.fans
         self.fans = self.connection.make_request('album', self.id, 'fans')
         return self.fans
 
     def get_comments(self):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         if hasattr(self, 'comments') and isinstance(self.comments, IterableCollection):
             return self.comments
-        self.comments = self.connection.make_request('album', self.id, 'comments')
+        self.comments = self.connection.make_request(
+            'album', self.id, 'comments')
         return self.comments
 
     def __repr__(self):
@@ -291,45 +334,55 @@ class Artist(object):
         self.__dict__.update(artist)
 
     def get_top(self):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         if hasattr(self, 'top') and isinstance(self.top, IterableCollection):
             return self.top
         self.top = self.connection.make_request('artist', self.id, 'top')
         return self.top
 
     def get_albums(self):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         if hasattr(self, 'albums') and isinstance(self.albums, IterableCollection):
             return self.albums
         self.albums = self.connection.make_request('artist', self.id, 'albums')
         return self.albums
 
     def get_fans(self):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         if hasattr(self, 'fans') and isinstance(self.fans, IterableCollection):
             return self.fans
         self.fans = self.connection.make_request('artist', self.id, 'fans')
         return self.fans
 
     def get_comments(self):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         if hasattr(self, 'comments') and isinstance(self.comments, IterableCollection):
             return self.comments
-        self.comments = self.connection.make_request('artist', self.id, 'comments')
+        self.comments = self.connection.make_request(
+            'artist', self.id, 'comments')
         return self.comments
 
     def get_related(self):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         if hasattr(self, 'related') and isinstance(self.related, IterableCollection):
             return self.related
-        self.related = self.connection.make_request('artist', self.id, 'related')
+        self.related = self.connection.make_request(
+            'artist', self.id, 'related')
         return self.related
 
     def get_radio(self):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         if hasattr(self, 'radio') and isinstance(self.radio, IterableCollection):
             return self.radio
         self.radio = self.connection.make_request('artist', self.id, 'radio')
         return self.radio
 
     def get_playlists(self):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         if hasattr(self, 'playlists') and isinstance(self.playlists, IterableCollection):
             return self.playlists
-        self.playlists = self.connection.make_request('artist', self.id, 'playlists')
+        self.playlists = self.connection.make_request(
+            'artist', self.id, 'playlists')
         return self.playlists
 
     def get_track(self):
@@ -347,19 +400,23 @@ class Chart(object):
         self.connection = connection
 
     def get_tracks(self):
-        self.tracks = self.connection.make_request('chart', 0, 'tracks',parameters={'limit': 100})
+        self.tracks = self.connection.make_request(
+            'chart', 0, 'tracks', parameters={'limit': 100})
         return self.tracks
 
     def get_albums(self):
-        self.albums = self.connection.make_request('chart', 0, 'albums',parameters={'limit': 100})
+        self.albums = self.connection.make_request(
+            'chart', 0, 'albums', parameters={'limit': 100})
         return self.albums
 
     def get_artists(self):
-        self.artists = self.connection.make_request('chart', 0, 'artists',parameters={'limit': 100})
+        self.artists = self.connection.make_request(
+            'chart', 0, 'artists', parameters={'limit': 100})
         return self.artists
 
     def get_playlists(self):
-        self.playlists = self.connection.make_request('chart', 0, 'playlists',parameters={'limit': 100})
+        self.playlists = self.connection.make_request(
+            'chart', 0, 'playlists', parameters={'limit': 100})
         return self.playlists
 
     def __repr__(self):
@@ -389,7 +446,8 @@ class Genre(object):
     def get_artists(self):
         if hasattr(self, 'artists') and isinstance(self.artists, IterableCollection):
             return self.artists
-        self.artists = self.connection.make_request('genre', self.id, 'artists')
+        self.artists = self.connection.make_request(
+            'genre', self.id, 'artists')
         return self.artists
 
     def get_radios(self):
@@ -412,8 +470,10 @@ class Playlist(object):
         self._tracks_retrieved = False
 
     def get_tracks(self):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         if not self._tracks_retrieved:
-            self.tracks = self.connection.make_request('playlist', self.id, 'tracks')
+            self.tracks = self.connection.make_request(
+                'playlist', self.id, 'tracks')
             self._tracks_retrieved = True
         return self.tracks
 
@@ -432,7 +492,8 @@ class Radio(object):
     def get_tracks(self):
         if hasattr(self, 'tracks') and isinstance(self.tracks, IterableCollection):
             return self.tracks
-        self.tracks = self.connection.make_request('radio', self.id, 'tracks',parameters={'limit': 200})
+        self.tracks = self.connection.make_request(
+            'radio', self.id, 'tracks', parameters={'limit': 200})
         return self.tracks
 
     def get_track(self):
@@ -451,6 +512,7 @@ class Track(object):
         self.__dict__.update(track)
 
     def get_url(self):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         if hasattr(self, 'url'):
             return self.url
         self.url = self.connection.make_request_streaming(self)
@@ -468,60 +530,74 @@ class User(object):
         self.connection = connection
         self.__dict__.update(user)
 
-        if(self.connection._profile_id != ''):
+        if (self.connection._profile_id != ''):
             self.id = self.connection._profile_id
 
-
     def get_albums(self):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         if hasattr(self, 'albums') and isinstance(self.albums, IterableCollection):
             return self.albums
         self.albums = self.connection.make_request('user', self.id, 'albums')
         return self.albums
 
     def get_artists(self):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         if hasattr(self, 'artists') and isinstance(self.artists, IterableCollection):
             return self.artists
         self.artists = self.connection.make_request('user', self.id, 'artists')
         return self.artists
 
     def get_charts(self):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         if hasattr(self, 'charts') and isinstance(self.charts, IterableCollection):
             return self.charts
         self.charts = self.connection.make_request('user', self.id, 'charts')
         return self.charts
 
     def get_flow(self):
-#        No caching for flow as we whant to have a new selection with every call
-        flow = self.connection.make_request('user', self.id, 'flow',parameters={'limit': 40})
-        flow._append_data(self.connection.make_request('user', self.id, 'flow',parameters={'limit': 40}))
-        flow._append_data(self.connection.make_request('user', self.id, 'flow',parameters={'limit': 40}))
-        flow._append_data(self.connection.make_request('user', self.id, 'flow',parameters={'limit': 40}))
-        flow._append_data(self.connection.make_request('user', self.id, 'flow',parameters={'limit': 40}))
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
+        #        No caching for flow as we whant to have a new selection with every call
+        flow = self.connection.make_request(
+            'user', self.id, 'flow', parameters={'limit': 40})
+        flow._append_data(self.connection.make_request(
+            'user', self.id, 'flow', parameters={'limit': 40}))
+        flow._append_data(self.connection.make_request(
+            'user', self.id, 'flow', parameters={'limit': 40}))
+        flow._append_data(self.connection.make_request(
+            'user', self.id, 'flow', parameters={'limit': 40}))
+        flow._append_data(self.connection.make_request(
+            'user', self.id, 'flow', parameters={'limit': 40}))
         return flow
 
     def get_history(self):
-#        No caching for history as we whant to have the lastest list
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
+        #        No caching for history as we whant to have the lastest list
         return self.connection.make_request('user', self.id, 'history')
 
     def get_playlists(self):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         if hasattr(self, 'playlists') and isinstance(self.playlists, IterableCollection):
             return self.playlists
-        self.playlists = self.connection.make_request('user', self.id, 'playlists')
+        self.playlists = self.connection.make_request(
+            'user', self.id, 'playlists')
         return self.playlists
 
     def get_radios(self):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         if hasattr(self, 'radios') and isinstance(self.radios, IterableCollection):
             return self.radios
         self.radios = self.connection.make_request('user', self.id, 'radios')
         return self.radios
 
     def get_tracks(self):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         if hasattr(self, 'tracks') and isinstance(self.tracks, IterableCollection):
             return self.tracks
         self.tracks = self.connection.make_request('user', self.id, 'tracks')
         return self.tracks
 
     def get_recommendations(self):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         if hasattr(self, 'recommendations') and isinstance(self.recommendations, Recommendations):
             return self.recommendations
         self.recommendations = Recommendations(self)
@@ -540,36 +616,50 @@ class Recommendations(object):
         self.connection = self.user.connection
 
     def get_albums(self):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         if hasattr(self, 'albums') and isinstance(self.albums, IterableCollection):
             return self.albums
-        self.albums = self.connection.make_request('user', self.user.id, 'recommendations/albums',parameters={'limit': 100})
+        self.albums = self.connection.make_request(
+            'user', self.user.id, 'recommendations/albums', parameters={'limit': 100})
         return self.albums
 
     def get_artists(self):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         if hasattr(self, 'artists') and isinstance(self.artists, IterableCollection):
             return self.artists
-        self.artists = self.connection.make_request('user', self.user.id, 'recommendations/artists',parameters={'limit': 100})
+        self.artists = self.connection.make_request(
+            'user', self.user.id, 'recommendations/artists', parameters={'limit': 100})
         return self.artists
 
     def get_tracks(self):
-#        No caching for flow as we whant to have a new selection with every call
-        tracks = self.connection.make_request('user', self.user.id, 'recommendations/tracks',parameters={'limit': 40})
-        tracks._append_data(self.connection.make_request('user', self.user.id, 'recommendations/tracks',parameters={'limit': 40}))
-        tracks._append_data(self.connection.make_request('user', self.user.id, 'recommendations/tracks',parameters={'limit': 40}))
-        tracks._append_data(self.connection.make_request('user', self.user.id, 'recommendations/tracks',parameters={'limit': 40}))
-        tracks._append_data(self.connection.make_request('user', self.user.id, 'recommendations/tracks',parameters={'limit': 40}))
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
+        #        No caching for flow as we whant to have a new selection with every call
+        tracks = self.connection.make_request(
+            'user', self.user.id, 'recommendations/tracks', parameters={'limit': 40})
+        tracks._append_data(self.connection.make_request(
+            'user', self.user.id, 'recommendations/tracks', parameters={'limit': 40}))
+        tracks._append_data(self.connection.make_request(
+            'user', self.user.id, 'recommendations/tracks', parameters={'limit': 40}))
+        tracks._append_data(self.connection.make_request(
+            'user', self.user.id, 'recommendations/tracks', parameters={'limit': 40}))
+        tracks._append_data(self.connection.make_request(
+            'user', self.user.id, 'recommendations/tracks', parameters={'limit': 40}))
         return tracks
 
     def get_playlists(self):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         if hasattr(self, 'playlists') and isinstance(self.playlists, IterableCollection):
             return self.playlists
-        self.playlists = self.connection.make_request('user', self.user.id, 'recommendations/playlists',parameters={'limit': 100})
+        self.playlists = self.connection.make_request(
+            'user', self.user.id, 'recommendations/playlists', parameters={'limit': 100})
         return self.playlists
 
     def get_radios(self):
+        xbmc.log(inspect.currentframe().f_code.co_name, level=xbmc.LOGINFO)
         if hasattr(self, 'radios') and isinstance(self.radios, IterableCollection):
             return self.radios
-        self.radios = self.connection.make_request('user', self.user.id, 'recommendations/radios',parameters={'limit': 100})
+        self.radios = self.connection.make_request(
+            'user', self.user.id, 'recommendations/radios', parameters={'limit': 100})
         return self.radios
 
     def __repr__(self):

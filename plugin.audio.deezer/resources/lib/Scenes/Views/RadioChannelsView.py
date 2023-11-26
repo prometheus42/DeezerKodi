@@ -1,5 +1,6 @@
 from .View import View
 
+import xbmc
 import xbmcgui
 import xbmcplugin
 
@@ -25,11 +26,11 @@ class RadioChannelsView(View):
         for i in range(0, len(self.radios)):
             try:
                 radio = self.radios[i]
-                list_item = xbmcgui.ListItem(radio.title, thumbnailImage=radio.picture_big)
-                list_item.setArt({'fanart': self.scene.scene_router.fanart_path})
+                list_item = xbmcgui.ListItem(radio.title)
+                list_item.setArt({'fanart': self.scene.scene_router.fanart_path, 'thumb': radio.picture_big})
                 list_items.append((self.get_url("/%d/tracks" % i), list_item, True))
-            except:
-                pass
+            except Exception as e:
+                xbmc.log(str(e), xbmc.LOGERROR)
         xbmcplugin.addDirectoryItems(self.scene.scene_router.addon_handle, list_items)
 
     def get_list_items(self):
@@ -39,14 +40,13 @@ class RadioChannelsView(View):
         list_items = []
         for track in radio.get_tracks():
             try:
-                list_item = xbmcgui.ListItem("%s - %s" % (track.artist.name, track.title),
-                                             thumbnailImage=track.album.cover_big)
+                list_item = xbmcgui.ListItem(f"{track.artist.name} - {track.title}")
                 list_item.setProperty('IsPlayable', 'true')
-                list_item.setArt({'fanart': track.artist.picture_big})
+                list_item.setArt({'fanart': track.artist.picture_big, 'thumb': track.album.cover_big})
                 self.add_item_track_info(list_item, track)
-                list_items.append((self.get_url("/%d" % track.id), list_item, False))
-            except:
-                pass
+                list_items.append((self.get_url(f"/{track.id}"), list_item, False))
+            except Exception as e:
+                xbmc.log(str(e), xbmc.LOGERROR)
         return list_items
 
     def show(self):

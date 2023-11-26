@@ -31,30 +31,32 @@ class ViewRouter(object):
             "recommendations": lambda parent: RecommendationsView(scene=self.scene, view_router=self, parent_view=parent)
         }
 
-    # e.g path = /playlists/tracks/1234567
-    # e.g path = /albums/123456/tracks
     def route(self, path):
-        xbmc.log("ViewRouter - path: " + str(path),level=xbmc.LOGNOTICE)
+        """
+        e.g path = /playlists/tracks/1234567
+        e.g path = /albums/123456/tracks
+        """
+        xbmc.log("ViewRouter - path: " + str(path),level=xbmc.LOGINFO)
         parts = path.split('/')
         parent = self.root
         id_last = None
         set_id = "false"
 
         for part in parts:
-#            xbmc.log("ViewRouter - part: " + str(part),level=xbmc.LOGNOTICE)
+#            xbmc.log("ViewRouter - part: " + str(part),level=xbmc.LOGINFO)
             if part in self.views:
                 if part.startswith('flow') or part.startswith('recent'):
                     #Special case for flow and recent as the id is before the final /tracks and not after
                     set_id = "true"
                 view = self.views[part]
- #               xbmc.log("ViewRouter - view: " + str(view),level=xbmc.LOGNOTICE)
+ #               xbmc.log("ViewRouter - view: " + str(view),level=xbmc.LOGINFO)
                 parent = view(parent)
                 if self.root is None:
                     self.root = parent
             else:
-#              xbmc.log("ViewRouter - else",level=xbmc.LOGNOTICE)
+#              xbmc.log("ViewRouter - else",level=xbmc.LOGINFO)
                 if parent is not None:
-#                   xbmc.log("ViewRouter - set_id: " + str(part),level=xbmc.LOGNOTICE)
+#                   xbmc.log("ViewRouter - set_id: " + str(part),level=xbmc.LOGINFO)
                     id_last = part
                     parent.set_id(part)
         if set_id.startswith('true') and id_last is not None:

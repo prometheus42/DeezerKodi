@@ -3,6 +3,7 @@ from .View import View
 import os
 import xbmc
 import xbmcgui
+import xbmcvfs
 import xbmcplugin
 
 
@@ -34,6 +35,7 @@ class SearchView(View):
         return None
 
     def get_lazy_albums(self):
+        # TODO: Make query local variable!
         self.query = ''
         # check if query isn't in the url already
         url_query = self.scene.scene_router.get_query().split("=")
@@ -78,14 +80,13 @@ class SearchView(View):
             list_items = []
             for track in results:
                 try:
-                    list_item = xbmcgui.ListItem("%s - %s" % (track.artist.name, track.title),
-                                                 thumbnailImage=track.album.cover_big)
+                    list_item = xbmcgui.ListItem(f"{track.artist.name} - {track.title}")
                     list_item.setProperty('IsPlayable', 'true')
-                    list_item.setArt({'fanart': track.artist.picture_big})
+                    list_item.setArt({'fanart': track.artist.picture_big, 'thumb': track.album.cover_big})
                     self.add_item_track_info(list_item, track)
-                    list_items.append((self.get_url("/%d?searchQuery=%s" % (track.id, self.query)), list_item, False))
-                except:
-                    pass
+                    list_items.append((self.get_url(f"/{track.id}?searchQuery={self.query}"), list_item, False))
+                except Exception as e:
+                    xbmc.log(str(e), xbmc.LOGERROR)
             return list_items
         return []
 
@@ -93,31 +94,31 @@ class SearchView(View):
     def _show_search_menu(self):
         items = {
             3010: {
-                "image": xbmc.translatePath(
+                "image": xbmcvfs.translatePath(
                     os.path.join(self.scene.scene_router.images_path, "search-button.png")),
                 "url": self.get_url('/3010/tracks')  # search all
             },
             3011: {
-                "image": xbmc.translatePath(os.path.join(self.scene.scene_router.images_path,
+                "image": xbmcvfs.translatePath(os.path.join(self.scene.scene_router.images_path,
                                                          "myartists-button.png")),
                 "url": self.get_url('/3011/artists')  # search artist
             },
             3012: {
-                "image": xbmc.translatePath(os.path.join(self.scene.scene_router.images_path,
+                "image": xbmcvfs.translatePath(os.path.join(self.scene.scene_router.images_path,
                                                          "myalbums-button.png")),
                 "url": self.get_url('/3012/albums')  # search album
             },
             3013: {
-                "image": xbmc.translatePath(
+                "image": xbmcvfs.translatePath(
                     os.path.join(self.scene.scene_router.images_path, "search-button.png")),
                 "url": self.get_url('/3013/tracks')  # search track
             }
         }
         list_items = []
-        for item in items:
-            list_item = xbmcgui.ListItem(self.scene.scene_router.language(item), iconImage=items[item]["image"])
-            list_item.setArt({'fanart': self.scene.scene_router.fanart_path})
-            list_items.append((items[item]["url"], list_item, True))
+        for key, item in items.items():
+            list_item = xbmcgui.ListItem(self.scene.scene_router.language(key))
+            list_item.setArt({'fanart': self.scene.scene_router.fanart_path, 'icon': item["image"]})
+            list_items.append((item["url"], list_item, True))
         xbmcplugin.addDirectoryItems(self.scene.scene_router.addon_handle, list_items)
 
     def show(self):

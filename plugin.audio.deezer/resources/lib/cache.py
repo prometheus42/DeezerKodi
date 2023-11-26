@@ -1,7 +1,9 @@
-import cPickle as pickle
+
+import pickle
 import os.path
 import time
 import xbmc
+import xbmcvfs
 
 import logging
 
@@ -17,13 +19,13 @@ class Cache(object):
 
     def read_cache(self):
         if not self.is_loaded:
-            path = xbmc.translatePath("special://temp/%s.p" % self.name)
-
+            path = xbmcvfs.translatePath(f"special://temp/{self.name}.p")
+            
             if os.path.isfile(path):
-                self.file = open(path, 'r+')
+                self.file = open(path, 'rb+')
                 self._cache = pickle.load(self.file)
             else:
-                self.file = open(path, 'w+')
+                self.file = open(path, 'wb+')
                 self._cache = {}
 
             self.is_loaded = True

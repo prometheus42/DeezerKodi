@@ -1,8 +1,9 @@
-import urlparse
+from urllib.parse import parse_qs
 import xbmcplugin
 import xbmc
 import xbmcgui
 import xbmcaddon
+import xbmcvfs
 import os
 
 from .MainScene import MainScene
@@ -25,9 +26,12 @@ class SceneRouter(object):
         self.addon = xbmcaddon.Addon('plugin.audio.deezer')
         self.language = self.addon.getLocalizedString
         self.addon_path = self.addon.getAddonInfo('path')
-        self.resources_path = xbmc.translatePath(os.path.join(self.addon_path, 'resources'))
-        self.images_path = xbmc.translatePath(os.path.join(self.resources_path, 'img'))
-        self.fanart_path = xbmc.translatePath(os.path.join(self.addon_path, 'fanart.jpg'))
+        self.resources_path = xbmcvfs.translatePath(
+            os.path.join(self.addon_path, 'resources'))
+        self.images_path = xbmcvfs.translatePath(
+            os.path.join(self.resources_path, 'img'))
+        self.fanart_path = xbmcvfs.translatePath(
+            os.path.join(self.addon_path, 'fanart.png'))
         self.cache = Cache("deezerapi")
 
         self.scenes = {
@@ -40,7 +44,7 @@ class SceneRouter(object):
             "search": lambda: SearchScene(self),
             "recent": lambda: RecentScene(self),
             "flow": lambda: FlowScene(self),
-            "recommendations":  lambda: RecommendationsScene(self)
+            "recommendations": lambda: RecommendationsScene(self)
         }
 
     # url consists of the path and query parts
@@ -48,7 +52,7 @@ class SceneRouter(object):
         return {'path': self.get_path(scene), 'query': self.get_query(scene)}
 
     def set_url(self, url):
-        full_url = "%s?%s" % (url['path'], url['query'])
+        full_url = f"{url['path']}?{url['query']}"
         self.args['path'] = [full_url]
 
     # path consists of e.g. /search/3000/tracks/1
@@ -57,7 +61,7 @@ class SceneRouter(object):
         if scene is None:
             path = self.args.get('path', ["/"])[0]
         else:
-            path = self.args.get('path', ["/%s" % scene.name])[0]
+            path = self.args.get('path', [f"/{scene.name}"])[0]
         return path.split('?')[0]
 
     def set_path(self, path):
@@ -74,7 +78,7 @@ class SceneRouter(object):
         if scene is None:
             path = self.args.get('path', ["/"])[0]
         else:
-            path = self.args.get('path', ["/%s" % scene.name])[0]
+            path = self.args.get('path', [f"/{scene.name}"])[0]
         s = path.split('?')
         if len(s) > 1:
             return s[1]
@@ -116,9 +120,12 @@ class SceneRouter(object):
 
     def connect(self):
         try:
+            xbmc.log(
+                f"Connecting with: {self._username}, {self._password}, {self._profile_id}")
             self.connection = self.cache.get('connection',
                                              default_producer=lambda: Connection(self._username, self._password, self._profile_id))
         except Exception as e:
+            xbmc.log(f'Exception: {e}', xbmc.LOGERROR)
             self.notification("Could not sign in", e)
             return False
         return True
@@ -126,12 +133,13 @@ class SceneRouter(object):
     def route(self, argv):
         self.base_url = argv[0]
         self.addon_handle = int(argv[1])
-        self.args = urlparse.parse_qs(argv[2][1:])
+        self.args = parse_qs(argv[2][1:])
 
         is_signed_in = self._check_credentials()
 
         if is_signed_in:
-            self.api = self.cache.get('api', default_producer=lambda: Api(self.connection))
+            self.api = self.cache.get(
+                'api', default_producer=lambda: Api(self.connection))
 
             scene_type = self.args.get('scene', ['main'])[0]
             scene = self.scenes.get(scene_type, None)

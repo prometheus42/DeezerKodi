@@ -1,6 +1,7 @@
 from .View import View
 from .TracksView import TracksView
 
+import xbmc
 import xbmcgui
 import xbmcplugin
 
@@ -26,11 +27,11 @@ class PlaylistsView(View):
         for i in range(0, len(self.playlists)):
             try:
                 playlist = self.playlists[i]
-                list_item = xbmcgui.ListItem(playlist.title, thumbnailImage=playlist.picture_big)
-                list_item.setArt({'fanart': self.scene.scene_router.fanart_path})
+                list_item = xbmcgui.ListItem(playlist.title)
+                list_item.setArt({'fanart': self.scene.scene_router.fanart_path, 'thumb': playlist.picture_big})
                 list_items.append((self.get_url("/%d/tracks" % i), list_item, True))
-            except:
-                pass
+            except Exception as e:
+                xbmc.log(str(e), xbmc.LOGERROR)
         xbmcplugin.addDirectoryItems(self.scene.scene_router.addon_handle, list_items)
 
     def get_list_items(self):
@@ -40,14 +41,13 @@ class PlaylistsView(View):
         list_items = []
         for track in self.scene.cache.get('playlist_%s' % playlist.id, default_producer=playlist.get_tracks):
             try:
-                list_item = xbmcgui.ListItem("%s - %s" % (track.artist.name, track.title),
-                                             thumbnailImage=track.album.cover_big)
+                list_item = xbmcgui.ListItem("%s - %s" % (track.artist.name, track.title))
                 list_item.setProperty('IsPlayable', 'true')
-                list_item.setArt({'fanart': playlist.picture_big})
+                list_item.setArt({'fanart': playlist.picture_big, 'thumb': track.album.cover_big})
                 self.add_item_track_info(list_item, track)
                 list_items.append((self.get_url("/%d" % track.id), list_item, False))
-            except:
-                pass
+            except Exception as e:
+                xbmc.log(str(e), xbmc.LOGERROR)
         return list_items
 
     def show(self):
